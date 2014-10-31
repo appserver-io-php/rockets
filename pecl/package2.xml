@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package
+packagerversion="1.9.4" version="2.0"
+xmlns="http://pear.php.net/dtd/package-2.0"
+xmlns:tasks="http://pear.php.net/dtd/tasks-1.0"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd">
+<name>${php.ext.name}</name>
+<channel>pecl.php.net</channel>
+<summary>Fast sockets implementation</summary>
+<description>A modern and fast socket implementation for php</description>
+<lead>
+    <name>Johann Zelger</name>
+    <user>zelgerj</user>
+    <email>jz@appserver.io</email>
+    <active>yes</active>
+</lead>
+<date>${actual.date}</date>
+<time>${actual.time}</time>
+<version>
+    <release>${release.version}</release>
+    <api>${api.version}</api>
+</version>
+<stability>
+    <release>${release.stability}</release>
+    <api>${api.stability}</api>
+</stability>
+<license uri="http://www.php.net/license/3_01.txt">PHP 3.01</license>
+<notes>version-release</notes>
+<contents>
+    <dir name="/">
+        <file name="LICENSE" role="doc"/>
+        <file name="README" role="doc"/>
+        <file name="config.m4" role="src"/>
+        <file name="config.w32" role="src"/>
+        <file name="rockets.c" role="src"/>
+        <file name="php_rockets.h" role="src"/>
+    </dir>
+</contents>
+<dependencies>
+    <required>
+        <php>
+            <min>5.3.0</min>
+        </php>
+        <pearinstaller>
+            <min>1.4.0b1</min>
+        </pearinstaller>
+    </required>
+</dependencies>
+<providesextension>${php.ext.name}</providesextension>
+<zendextsrcrelease />
+<changelog>
+    <release>
+        <version>
+            <release>0.1.0</release>
+            <api>0.1.0</api>
+        </version>
+        <stability>
+            <release>beta</release>
+            <api>beta</api>
+        </stability>
+        <date>2013-08-27</date>
+        <license uri="http://www.php.net/license/3_01.txt">PHP 3.01</license>
+        <notes>initial release</notes>
+    </release>
+</changelog>
+</package>

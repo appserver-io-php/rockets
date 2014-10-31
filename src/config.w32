@@ -1,0 +1,19 @@
+// $Id$
+// vim:ft=javascript
+
+var ROCKETS_EXT_NAME="rockets";
+var ROCKETS_EXT_SRC="";
+var ROCKETS_EXT_DIR="ext/rockets";
+var ROCKETS_EXT_API="rockets.c";
+var ROCKETS_EXT_FLAGS="/I" + configure_module_dirname;
+
+ARG_ENABLE("rockets", "Enable rockets support", "no");
+
+if (PHP_ROCKETS != "no") {
+    if (CHECK_HEADER_ADD_INCLUDE("php_rockets.h", "CFLAGS_ROCKETS", PHP_ROCKETS + ";" + configure_module_dirname)) {
+        EXTENSION(ROCKETS_EXT_NAME, ROCKETS_EXT_API, PHP_ROCKETS_SHARED, ROCKETS_EXT_FLAGS);
+        ADD_SOURCES(ROCKETS_EXT_DIR, ROCKETS_EXT_SRC, ROCKETS_EXT_NAME);
+    } else {
+        WARNING("rockets support not enabled; headers not found");
+    }
+}

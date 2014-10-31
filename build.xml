@@ -1,0 +1,299 @@
+<?xml version="1.0"?>
+<project name="rockets" default="deploy" basedir=".">
+
+    <property environment="env" />
+
+    <property name="c-src.dir" value="${basedir}/src" />
+    <property name="c-php-tests.dir" value="${basedir}/src/tests" />
+    <property name="c-build.dir" value="${basedir}/build" />
+    <property name="c-target.dir" value="${basedir}/target" />
+    <property name="c-pecl.dir" value="${basedir}/pecl" />
+
+    <property file="${user.home}/build.properties"/>
+    <property file="${basedir}/build.properties"/>
+    <property file="${basedir}/build.default.properties"/>
+    <property file="${basedir}/build.${os.name}.properties"/>
+
+    <!-- ==================================================================== -->
+    <!-- Cleans the directories with the generated source files               -->
+    <!-- ==================================================================== -->
+    <target name="clean" description="Cleans almost everything, so use carefully.">
+        <delete dir="${c-target.dir}" includeemptydirs="true" quiet="false" verbose="true" failonerror="true"/>
+    </target>
+
+    <!-- ==================================================================== -->
+    <!-- Prepares all the required directories                                -->
+    <!-- ==================================================================== -->
+    <target name="prepare" depends="clean" description="Prepares all the required directories.">
+        <tstamp>
+            <format property="actual.date" pattern="yyyy-MM-dd" locale="en" />
+        </tstamp>
+        <tstamp>
+            <format property="actual.time" pattern="hh:mm:ss" locale="en" />
+        </tstamp>
+        <mkdir dir="${c-build.dir}" />
+        <mkdir dir="${c-target.dir}" />
+    </target>
+
+    <!-- ==================================================================== -->
+    <!-- Copies the sources to the target directory                           -->
+    <!-- ==================================================================== -->
+    <target name="copy" depends="prepare" description="Copies the sources to the target directory.">
+        <copy todir="${c-target.dir}/${php.ext.name}" preservelastmodified="true" overwrite="true">
+            <fileset dir="${c-src.dir}">
+                <include name="**/*" />
+            </fileset>
+        </copy>
+        <copy todir="${c-target.dir}/${php.ext.name}" preservelastmodified="true" overwrite="true">
+            <fileset dir="${c-src.dir}">
+                <include name="php_${php.ext.name}.h" />
+            </fileset>
+            <filterchain>
+                <expandproperties/>
+            </filterchain>
+        </copy>
+        <copy todir="${c-target.dir}/${php.ext.name}" preservelastmodified="true" overwrite="true">
+            <fileset dir="${c-pecl.dir}">
+                <include name="**/*"/>
+            </fileset>
+            <filterchain>
+                <expandproperties/>
+            </filterchain>
+        </copy>
+    </target>
+
+    <!-- ==================================================================== -->
+    <!-- Copies the sources to the deploy directory                           -->
+    <!-- ==================================================================== -->
+    <target name="deploy" depends="copy" description="Copies the sources to the deploy directory.">
+        <copy todir="${deploy.dir}" preservelastmodified="true" overwrite="true">
+            <fileset dir="${c-target.dir}">
+                <include name="**/*"/>
+            </fileset>
+        </copy>
+    </target>
+
+    <!-- ==================================================================== -->
+    <!-- Check if PHP source package has been downloaded yet                  -->
+    <!-- ==================================================================== -->
+    <target name="check-php-src-present" description="Check if PHP Source Package has been downloaded yet.">
+        <available file="/tmp/php-${php.version}.tar.gz" property="php-src.present"/>
+    </target>
+    
+    <!-- ==================================================================== -->
+    <!-- Check if PECL memcached sources has been downloaded yet              -->
+    <!-- ==================================================================== -->
+    <target name="check-memcached-src-present" description="Check if PECL memcached sources has been downloaded yet.">
+        <available file="/tmp/memcached-${memcached.version}.tgz" property="memcached-src.present"/>
+    </target>
+    
+    <!-- ==================================================================== -->
+    <!-- Check if PECL apcu sources has been downloaded yet                   -->
+    <!-- ==================================================================== -->
+    <target name="check-apcu-src-present" description="Check if PECL memcached sources has been downloaded yet.">
+        <available file="/tmp/apcu-${apcu.version}.tgz" property="apcu-src.present"/>
+    </target>
+
+    <!-- ==================================================================== -->
+    <!-- Check if PECL pthreads sources has been downloaded yet               -->
+    <!-- ==================================================================== -->
+    <target name="check-pthreads-src-present" description="Check if PECL pthreads sources has been downloaded yet.">
+        <available file="/tmp/pthreads-${pthreads.version}.tgz" property="pthreads-src.present"/>
+    </target>
+
+    <!-- ==================================================================== -->
+    <!-- Check if PECL redis sources has been downloaded yet                  -->
+    <!-- ==================================================================== -->
+    <target name="check-redis-src-present" description="Check if PECL redis sources has been downloaded yet.">
+        <available file="/tmp/redis-${redis.version}.tgz" property="redis-src.present"/>
+    </target>
+    
+    <!-- ==================================================================== -->
+    <!-- Check if PECL xdebug sources has been downloaded yet                     -->
+    <!-- ==================================================================== -->
+    <target name="check-xdebug-src-present" description="Check if PECL xdebug sources has been downloaded yet.">
+        <available file="/tmp/xdebug-${xdebug.version}.tgz" property="xdebug-src.present"/>
+    </target>
+    
+    <!-- ==================================================================== -->
+    <!-- Get PHP source package by given version number                       -->
+    <!-- ==================================================================== -->
+    <target name="get-php-src" depends="check-php-src-present" unless="${php-src.present}" description="Get PHP source package by given version number">
+        <get src="${php.downloadurl}" dest="/tmp/php-${php.version}.tar.gz"/>
+    </target>
+
+    <!-- ==================================================================== -->
+    <!-- Get PECL memcached source package by given version number            -->
+    <!-- ==================================================================== -->
+    <target name="get-memcached-src" depends="check-memcached-src-present" unless="${memcached-src.present}" description="Get PECL memcached source package by given version number">
+        <get src="http://pecl.php.net/get/memcached-${memcached.version}.tgz" dest="/tmp/memcached-${memcached.version}.tgz"/>
+    </target>
+    
+    <!-- ==================================================================== -->
+    <!-- Get PECL apcu source package by given version number                 -->
+    <!-- ==================================================================== -->
+    <target name="get-apcu-src" depends="check-apcu-src-present" unless="${apcu-src.present}" description="Get PECL memcached source package by given version number">
+        <get src="http://pecl.php.net/get/apcu-${apcu.version}.tgz" dest="/tmp/apcu-${apcu.version}.tgz"/>
+    </target>
+
+    <!-- ==================================================================== -->
+    <!-- Get PECL pthreads source package by given version number             -->
+    <!-- ==================================================================== -->
+    <target name="get-pthreads-src" depends="check-pthreads-src-present" unless="${pthreads-src.present}" description="Get PECL pthreads source package by given version number">
+        <get src="http://pecl.php.net/get/pthreads-${pthreads.version}.tgz" dest="/tmp/pthreads-${pthreads.version}.tgz"/>
+    </target>
+
+    <!-- ==================================================================== -->
+    <!-- Get PECL redis source package by given version number                -->
+    <!-- ==================================================================== -->
+    <target name="get-redis-src" depends="check-redis-src-present" unless="${redis-src.present}" description="Get PECL redis source package by given version number">
+        <get src="http://pecl.php.net/get/redis-${redis.version}.tgz" dest="/tmp/redis-${redis.version}.tgz"/>
+    </target>
+    
+    <!-- ==================================================================== -->
+    <!-- Get PECL xdebug source package by given version number               -->
+    <!-- ==================================================================== -->
+    <target name="get-xdebug-src" depends="check-xdebug-src-present" unless="${xdebug-src.present}" description="Get PECL xdebug source package by given version number">
+        <get src="http://pecl.php.net/get/xdebug-${xdebug.version}.tgz" dest="/tmp/xdebug-${xdebug.version}.tgz"/>
+    </target>
+    
+    <!-- ==================================================================== -->
+    <!-- Prepares the PHP sources for the runtime                             -->
+    <!-- ==================================================================== -->
+    <target name="prepare-source" depends="prepare" description="Prepares the PHP sources for the runtime.">
+        <delete dir="${c-build.dir}/php-{php.version}" includeemptydirs="true" quiet="false" verbose="false" failonerror="false"/>
+        
+        <!-- prepare PHP sources -->
+        <antcall target="get-php-src"/>
+        <untar src="/tmp/php-${php.version}.tar.gz" dest="${c-build.dir}" compression="gzip"/>
+        <chmod perm="755">
+            <fileset dir="${c-build.dir}/php-${php.version}/build">
+                <include name="**/*"/>
+            </fileset>
+        </chmod>
+        
+        <!-- recreate symlink -->
+        <symlink link="${c-build.dir}/php" action="delete"/>
+        <symlink link="${c-build.dir}/php" resource="${c-build.dir}/php-${php.version}"/>
+        
+        <antcall target="get-pthreads-src"/>
+        <untar src="/tmp/pthreads-${pthreads.version}.tgz" dest="/tmp" compression="gzip"/>
+        <move todir="${c-build.dir}/php/ext/pthreads">
+            <fileset dir="/tmp/pthreads-${pthreads.version}"/>
+        </move>
+        
+        <!-- activate to fetch pthreads head instead of given version in properties file
+        <exec executable="git" dir="${c-build.dir}/php/ext">
+            <arg line="clone https://github.com/krakjoe/pthreads.git"/>
+        </exec>
+        
+        <exec executable="git" dir="${c-build.dir}/php/ext">
+            <arg line="clone https://github.com/krakjoe/uopz.git"/>
+        </exec>
+         -->
+
+        <antcall target="get-memcached-src"/>
+        <untar src="/tmp/memcached-${memcached.version}.tgz" dest="/tmp" compression="gzip"/>
+        <move todir="${c-build.dir}/php/ext/memcached">
+            <fileset dir="/tmp/memcached-${memcached.version}"/>
+        </move>
+        
+        <antcall target="get-redis-src"/>
+        <untar src="/tmp/redis-${redis.version}.tgz" dest="/tmp" compression="gzip"/>
+        <move todir="${c-build.dir}/php/ext/redis">
+            <fileset dir="/tmp/redis-${redis.version}"/>
+        </move>
+        
+        <antcall target="get-apcu-src"/>
+        <untar src="/tmp/apcu-${apcu.version}.tgz" dest="/tmp" compression="gzip"/>
+        <move todir="${c-build.dir}/php/ext/apcu">
+            <fileset dir="/tmp/apcu-${apcu.version}"/>
+        </move>
+        
+        <antcall target="get-xdebug-src"/>
+        <untar src="/tmp/xdebug-${xdebug.version}.tgz" dest="/tmp" compression="gzip"/>
+        <move todir="${c-build.dir}/php/ext/xdebug">
+            <fileset dir="/tmp/xdebug-${xdebug.version}"/>
+        </move>
+    </target>
+    
+    <!-- ==================================================================== -->
+    <!-- Init the PHP source for the build environment                        -->
+    <!-- ==================================================================== -->
+    <target name="configure" description="Configures the php runtime environment.">
+        <delete file="${c-build.dir}/php/aclocal.m4"/>
+        <delete file="${c-build.dir}/php/configure"/>
+        <exec dir="${c-build.dir}/php" executable="sh">
+            <arg value="buildconf"/>
+            <arg line="--force"/>
+        </exec>
+        <!-- configure, compile and install PHP binary -->
+        <exec dir="${c-build.dir}/php" executable="sh">
+            <!-- <env key="CC" value="${php.cc}"/> -->
+            <arg line="configure ${php.configure} --with-libdir=${php.configure.libdir}"/>
+        </exec>
+    </target>
+
+    <!-- ==================================================================== -->
+    <!-- Makes the PHP source for the PHP build runtime                       -->
+    <!-- ==================================================================== -->
+    <target name="make" description="Compiles the php runtime environment.">
+        <exec dir="${c-build.dir}/php" executable="make">
+            <arg line="-j6"/>
+            </exec>
+    </target>
+    
+    <!-- ==================================================================== -->
+    <!-- Installs the builded php for the PHP build runtime                   -->
+    <!-- ==================================================================== -->
+    <target name="make-install" description="Installes the php build internally">
+        <exec dir="${c-build.dir}/php" executable="make">
+            <arg line="install"/>
+        </exec>
+    </target>
+    
+    <!-- ==================================================================== -->
+    <!-- Inits the build source for PHP                                       -->
+    <!-- ==================================================================== -->
+    <target name="init-build" description="Init the php build environment.">
+        <antcall target="prepare-source"/>
+        <antcall target="deploy"/>
+        <antcall target="configure"/>
+        <antcall target="make"/>
+        <chmod perm="+x">
+            <fileset dir="${c-build.dir}/php-${php.version}/scripts">
+                <include name="**/*"/>
+            </fileset>
+        </chmod>
+    </target>
+    
+    <!-- ==================================================================== -->
+    <!-- Creates a pecl package                                               -->
+    <!-- ==================================================================== -->
+    <target name="create-package" depends="copy" description="Creates a pecl package">
+        <exec dir="${c-target.dir}/${php.ext.name}" executable="pecl">
+            <arg line="package package2.xml"/>
+        </exec>
+    </target>
+    
+    <!-- ==================================================================== -->
+    <!-- Runs php tests                                                       -->
+    <!-- ==================================================================== -->
+    <target name="run-tests" description="Runs the php tests">
+        <exec dir="${c-build.dir}/php" executable="php">
+            <env key="TEST_PHP_EXECUTABLE" value="${c-build.dir}/php/sapi/cli/php"/>
+            <arg line="./run-tests.php ${c-php-tests.dir}"/>
+        </exec>
+    </target>
+    
+    <!-- ==================================================================== -->
+    <!-- Runs php tests in verbose mode to show all testing relevant info     -->
+    <!-- ==================================================================== -->
+    <target name="run-tests-verbose" description="Runs the php tests">
+        <exec dir="${c-build.dir}/php" executable="php">
+            <env key="TEST_PHP_EXECUTABLE" value="${c-build.dir}/php/sapi/cli/php"/>
+            <arg line="./run-tests.php --show-all ${c-php-tests.dir}"/>
+        </exec>
+    </target>
+
+</project>
