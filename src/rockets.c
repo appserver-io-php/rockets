@@ -46,10 +46,12 @@ ZEND_DECLARE_MODULE_GLOBALS(rockets)
 static int le_rockets;
 
 const zend_function_entry rockets_functions[] = {
-    PHP_FE(rockets_test, NULL)
-	PHP_FE(rockets_server, NULL)
+    PHP_FE(rockets_socket, NULL)
+	PHP_FE(rockets_bind, NULL)
+	PHP_FE(rockets_listen, NULL)
 	PHP_FE(rockets_accept, NULL)
 	PHP_FE(rockets_close, NULL)
+	PHP_FE(rockets_setsockopt, NULL)
     PHP_FE_END
 };
 
@@ -125,64 +127,114 @@ PHP_MINFO_FUNCTION(rockets)
     DISPLAY_INI_ENTRIES();
 }
 
-/* {{{ proto boolean rockets_test()
- 	 	 Returns true */
-PHP_FUNCTION(rockets_test)
+/* {{{ proto int rockets_socket()
+		Create a new socket of type TYPE in domain DOMAIN, using
+		protocol PROTOCOL.  If PROTOCOL is zero, one is chosen automatically.
+		Returns a file descriptor for the new socket, or -1 for errors.  */
+PHP_FUNCTION(rockets_socket)
 {
-	RETURN_TRUE;
+	// init vars
+	int fd = 0;
+	long type;
+	long domain;
+	long protocol = 0;
+	// parse params
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll|l", &type, &domain, &protocol) == FAILURE) {
+		return;
+	}
+	// return fd
+	RETURN_LONG((long)socket(type, domain, protocol));
 }
 
-/* {{{ proto int rockets_server()
- 	 	 Returns the listen fd */
-PHP_FUNCTION(rockets_server)
+/* {{{ proto int rockets_bind()
+		Give the socket FD the local address ADDR (which is LEN bytes long).  */
+PHP_FUNCTION(rockets_bind)
 {
-	int listenfd = 0;
-	struct sockaddr_in serv_addr;
+	int fd;
+	char ip[INET_ADDRSTRLEN];
+	int ip_len;
+	int port;
+	int family = AF_INET;
+    struct sockaddr_in sin = { 0 };
+    // parse params
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lsl|l", &fd, &ip, &ip_len, &port, &family) == FAILURE) {
+		return;
+	}
+    // build up server address
+    sin.sin_family = family;
+    sin.sin_port = htons(port);
+    inet_pton(AF_INET, ip, &(sin.sin_addr));
+    // bind it
+    RETURN_LONG((long)bind(fd, (struct sockaddr*)&sin, sizeof(sin)));
+}
 
-	listenfd = socket(AF_INET, SOCK_STREAM, 0);
-	memset(&serv_addr, '0', sizeof(serv_addr));
-
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	serv_addr.sin_port = htons(5000);
-
-	bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
-	listen(listenfd, 10);
-
-	RETURN_LONG((long)listenfd);
+/* {{{ proto int rockets_listen()
+		Prepare to accept connections on socket FD.
+		N connection requests will be queued before further requests are refused.
+		Returns 0 on success, -1 for errors.  */
+PHP_FUNCTION(rockets_listen)
+{
+	int fd;
+	int backlog = 128;
+	int backlog_len;
+	// parse params
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l|s", &fd, &backlog, &backlog_len) == FAILURE) {
+		return;
+	}
+	// start listening
+	RETURN_LONG(listen(fd, backlog));
 }
 
 /* {{{ proto int rockets_accept()
- 	 	 Returns the accepted fd */
+		Await a connection on socket FD.
+		When a connection arrives, open a new socket to communicate with it,
+		set *ADDR (which is *ADDR_LEN bytes long) to the address of the connecting
+		peer and *ADDR_LEN to the address's actual length, and return the
+		new socket's descriptor, or -1 for errors. */
 PHP_FUNCTION(rockets_accept)
 {
-	long listenfd;
-	int fd = 0;
-
+	int listenfd;
 	// parse params
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &listenfd) == FAILURE) {
-	    return;
+		return;
 	}
-
-	fd = accept((int)listenfd, (struct sockaddr*)NULL, NULL);
-	RETURN_LONG((long)fd);
+	// accept connections
+	RETURN_LONG((long)accept((int)listenfd, (struct sockaddr*)NULL, NULL));
 }
 
 /* {{{ proto boolean rockets_close()
  	 	 Returns if the fd was closed or not */
 PHP_FUNCTION(rockets_close)
 {
-	long fd;
+	int fd;
 
 	// parse params
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &fd) == FAILURE) {
 	    return;
 	}
 
-	if (close((int)fd)) {
+	if (close(fd)) {
 		RETURN_TRUE;
 	} else  {
 		RETURN_FALSE;
+	}
+}
+
+PHP_FUNCTION(rockets_setsockopt)
+{
+	int fd;
+	int level;
+	int val;
+
+	// parse params
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lll", &fd, &level, &val) == FAILURE) {
+	    return;
+	}
+
+	if (setsockopt(fd, SOL_SOCKET, level, &val, sizeof val) < 0) {
+		RETURN_FALSE;
+	} else  {
+		RETURN_TRUE;
 	}
 }
 

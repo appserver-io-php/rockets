@@ -19,12 +19,27 @@
  * @author      Johann Zelger <jz@appserver.io>
  */
 
+// open server socket
+echo "rockets_socket ";
+var_dump(
+    $serverFd = rockets_socket(AF_INET, SOCK_STREAM, SOL_TCP)
+);
 
-$serverFd = rockets_server();
+echo "rockets_bind ";
+// bind server socket to local address and port
+var_dump(
+    rockets_bind($serverFd, '0.0.0.0', 5556, AF_INET)
+);
 
-$clientFd = rockets_accept($serverFd);
+echo "rockets_listen ";
+// listen for connections with backlog of 1024
+var_dump(
+    rockets_listen($serverFd, 1024)
+);
 
-var_dump(rockets_close($clientFd));
-var_dump(rockets_close($serverFd));
-
-var_dump($clientFd);
+while (1) {
+    echo "rockets_accept ";
+    var_dump(
+        rockets_accept($serverFd)
+    );
+}

@@ -62,10 +62,12 @@ PHP_RINIT_FUNCTION(rockets);
 PHP_RSHUTDOWN_FUNCTION(rockets);
 PHP_MINFO_FUNCTION(rockets);
 
-PHP_FUNCTION(rockets_test);
-PHP_FUNCTION(rockets_server);
+PHP_FUNCTION(rockets_socket);
+PHP_FUNCTION(rockets_bind);
+PHP_FUNCTION(rockets_listen);
 PHP_FUNCTION(rockets_accept);
 PHP_FUNCTION(rockets_close);
+PHP_FUNCTION(rockets_setsockopt);
 
 ZEND_BEGIN_MODULE_GLOBALS(rockets)
     long                     pproftrace;
