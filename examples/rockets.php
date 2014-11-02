@@ -99,5 +99,5 @@ $acceptors = [];
 for ($i = 0; $i < 16; $i++) {
     $acceptor = new Acceptor($serverFd);
     $acceptor->start();
-    $acceptors[$acceptor];
+    $acceptors[] = $acceptor;
 }
