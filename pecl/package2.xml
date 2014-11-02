@@ -8,7 +8,7 @@ xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/ta
 <name>${php.ext.name}</name>
 <channel>pecl.php.net</channel>
 <summary>Fast sockets implementation</summary>
-<description>A modern and fast socket implementation for php</description>
+<description>The real socket implementation for php</description>
 <lead>
     <name>Johann Zelger</name>
     <user>zelgerj</user>
