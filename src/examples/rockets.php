@@ -25,6 +25,34 @@ var_dump(
     $serverFd = rockets_socket(AF_INET, SOCK_STREAM, SOL_TCP)
 );
 
+
+echo "socket get option SO_REUSEADDR";
+var_dump(
+    rockets_getsockopt($serverFd, SOL_SOCKET, SO_REUSEADDR)
+);
+echo "socket get option TCP_NODELAY";
+var_dump(
+    rockets_getsockopt($serverFd, SOL_TCP, TCP_NODELAY)
+);
+
+echo "socket set option ";
+// socket set options
+var_dump(
+    rockets_setsockopt($serverFd, SOL_SOCKET, SO_REUSEADDR, true)
+);
+var_dump(
+    rockets_setsockopt($serverFd, SOL_TCP, TCP_NODELAY, true)
+);
+
+echo "socket get option SO_REUSEADDR";
+var_dump(
+    rockets_getsockopt($serverFd, SOL_SOCKET, SO_REUSEADDR)
+);
+echo "socket get option TCP_NODELAY";
+var_dump(
+    rockets_getsockopt($serverFd, SOL_TCP, TCP_NODELAY)
+);
+
 echo "rockets_bind ";
 // bind server socket to local address and port
 var_dump(
@@ -37,9 +65,39 @@ var_dump(
     rockets_listen($serverFd, 1024)
 );
 
-while (1) {
-    echo "rockets_accept ";
-    var_dump(
-        rockets_accept($serverFd)
-    );
+$httpResponseMessage = <<<EOD
+HTTP/1.1 200 OK
+Server: Rockets/0.1.0
+Content-Length: 0
+Content-Type: text/html;charset=UTF-8
+
+EOD;
+
+define('HTTP_RESPONSE_MESSAGE', $httpResponseMessage);
+
+class Acceptor extends Thread
+{
+    public function __construct($fd)
+    {
+        $this->fd = $fd;
+    }
+
+    public function run()
+    {
+        while (1) {
+            if ($clientFd = rockets_accept($this->fd)) {
+                rockets_recv($clientFd);
+                rockets_send($clientFd, HTTP_RESPONSE_MESSAGE);
+                rockets_close($clientFd);
+            }
+        }
+    }
+}
+
+$acceptors = [];
+
+for ($i = 0; $i < 16; $i++) {
+    $acceptor = new Acceptor($serverFd);
+    $acceptor->start();
+    $acceptors[$acceptor];
 }

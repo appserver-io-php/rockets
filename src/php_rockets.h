@@ -68,6 +68,9 @@ PHP_FUNCTION(rockets_listen);
 PHP_FUNCTION(rockets_accept);
 PHP_FUNCTION(rockets_close);
 PHP_FUNCTION(rockets_setsockopt);
+PHP_FUNCTION(rockets_getsockopt);
+PHP_FUNCTION(rockets_recv);
+PHP_FUNCTION(rockets_send);
 
 ZEND_BEGIN_MODULE_GLOBALS(rockets)
     long                     pproftrace;
@@ -82,8 +85,6 @@ PHPAPI ZEND_EXTERN_MODULE_GLOBALS(apd)
 #endif
 
 #define ROCKETS_TSRMLS_PARAM(param) (param) TSRMLS_CC
-#define TEMP_OVRD_FUNC_NAME "__overridden__"
-
 
 #endif    /* PHP_ROCKETS_H */
 

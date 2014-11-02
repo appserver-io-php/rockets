@@ -52,6 +52,9 @@ const zend_function_entry rockets_functions[] = {
 	PHP_FE(rockets_accept, NULL)
 	PHP_FE(rockets_close, NULL)
 	PHP_FE(rockets_setsockopt, NULL)
+	PHP_FE(rockets_getsockopt, NULL)
+	PHP_FE(rockets_recv, NULL)
+	PHP_FE(rockets_send, NULL)
     PHP_FE_END
 };
 
@@ -120,7 +123,7 @@ PHP_RSHUTDOWN_FUNCTION(rockets)
 PHP_MINFO_FUNCTION(rockets)
 {
 	php_info_print_table_start();
-    php_info_print_table_header(2, "rockets", "enabled");
+    php_info_print_table_header(2, "rockets support", "enabled");
     php_info_print_table_row(2, "Version", ROCKETS_VERSION);
     php_info_print_table_end();
 
@@ -133,16 +136,18 @@ PHP_MINFO_FUNCTION(rockets)
 		Returns a file descriptor for the new socket, or -1 for errors.  */
 PHP_FUNCTION(rockets_socket)
 {
-	// init vars
-	int fd = 0;
-	long type;
-	long domain;
-	long protocol = 0;
-	// parse params
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll|l", &type, &domain, &protocol) == FAILURE) {
+	int fd = 0, type, domain, protocol;
+	long arg1, arg2, arg3 = NULL;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll|l", &arg1, &arg2, &arg3) == FAILURE) {
 		return;
 	}
-	// return fd
+	type = (int)arg1;
+	domain = (int)arg2;
+	if (arg3 != NULL) {
+		protocol = arg3;
+	}
+
 	RETURN_LONG((long)socket(type, domain, protocol));
 }
 
@@ -150,21 +155,18 @@ PHP_FUNCTION(rockets_socket)
 		Give the socket FD the local address ADDR (which is LEN bytes long).  */
 PHP_FUNCTION(rockets_bind)
 {
-	int fd;
 	char ip[INET_ADDRSTRLEN];
-	int ip_len;
-	int port;
-	int family = AF_INET;
+	int fd, ip_len, port, family = AF_INET;
     struct sockaddr_in sin = { 0 };
-    // parse params
+
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lsl|l", &fd, &ip, &ip_len, &port, &family) == FAILURE) {
 		return;
 	}
-    // build up server address
+
     sin.sin_family = family;
     sin.sin_port = htons(port);
     inet_pton(AF_INET, ip, &(sin.sin_addr));
-    // bind it
+
     RETURN_LONG((long)bind(fd, (struct sockaddr*)&sin, sizeof(sin)));
 }
 
@@ -174,15 +176,18 @@ PHP_FUNCTION(rockets_bind)
 		Returns 0 on success, -1 for errors.  */
 PHP_FUNCTION(rockets_listen)
 {
-	int fd;
-	int backlog = 128;
-	int backlog_len;
-	// parse params
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l|s", &fd, &backlog, &backlog_len) == FAILURE) {
+	long arg1, arg2 = NULL;
+	int fd, backlog = 128;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l|l", &arg1, &arg2) == FAILURE) {
 		return;
 	}
-	// start listening
-	RETURN_LONG(listen(fd, backlog));
+	fd = (int)arg1;
+	if (arg2 != NULL) {
+		backlog = (int)arg2;
+	}
+
+	RETURN_LONG((long)listen(fd, backlog));
 }
 
 /* {{{ proto int rockets_accept()
@@ -193,26 +198,30 @@ PHP_FUNCTION(rockets_listen)
 		new socket's descriptor, or -1 for errors. */
 PHP_FUNCTION(rockets_accept)
 {
-	int listenfd;
-	// parse params
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &listenfd) == FAILURE) {
+	long arg1;
+	int listenfd = 0, connfd = 0;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &arg1) == FAILURE) {
 		return;
 	}
-	// accept connections
-	RETURN_LONG((long)accept((int)listenfd, (struct sockaddr*)NULL, NULL));
+	listenfd = (int)arg1;
+
+	connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
+	RETURN_LONG((long)connfd);
 }
 
 /* {{{ proto boolean rockets_close()
- 	 	 Returns if the fd was closed or not */
+		Close the file descriptor FD.
+		This function is a cancellation point and therefore not marked with */
 PHP_FUNCTION(rockets_close)
 {
+	long arg1;
 	int fd;
 
-	// parse params
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &fd) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &arg1) == FAILURE) {
 	    return;
 	}
-
+	fd = (int)arg1;
 	if (close(fd)) {
 		RETURN_TRUE;
 	} else  {
@@ -220,22 +229,101 @@ PHP_FUNCTION(rockets_close)
 	}
 }
 
+/* {{{ proto boolean rockets_setsockopt()
+		Set socket FD's option OPTNAME at protocol level LEVEL
+		to *OPTVAL (which is OPTLEN bytes long).
+		Returns 0 on success, -1 for errors.  */
 PHP_FUNCTION(rockets_setsockopt)
 {
-	int fd;
-	int level;
-	int val;
+	long arg1, arg2, arg3;
+	char *arg4, opt_val;
+	int fd, level, opt, arg4_len;
 
-	// parse params
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lll", &fd, &level, &val) == FAILURE) {
-	    return;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "llls", &arg1, &arg2, &arg3, &arg4, &arg4_len) == FAILURE) {
+		return;
 	}
 
-	if (setsockopt(fd, SOL_SOCKET, level, &val, sizeof val) < 0) {
+	fd = (int)arg1;
+	level = (int)arg2;
+	opt = (int)arg3;
+
+	if (setsockopt(fd, level, opt, &arg4, &arg4_len)) {
 		RETURN_FALSE;
 	} else  {
 		RETURN_TRUE;
 	}
+}
+
+/* {{{ proto boolean rockets_getsockopt()
+		Put the current value for socket FD's option OPTNAME at protocol level LEVEL
+		into OPTVAL (which is *OPTLEN bytes long), and set *OPTLEN to the value's
+		actual length.  Returns 0 on success, -1 for errors.  */
+PHP_FUNCTION(rockets_getsockopt)
+{
+	char* opt_val;
+	int opt_val_len, fd, level, opt;
+	long arg1, arg2, arg3;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lll", &arg1, &arg2, &arg3) == FAILURE) {
+		return;
+	}
+
+	fd = (int)arg1;
+	level = (int)arg2;
+	opt = (int)arg3;
+
+	getsockopt(fd, level, opt, &opt_val, &opt_val_len);
+
+	RETURN_LONG((long)opt_val);
+	//RETURN_STRINGL(opt_val, opt_val_len, 0);
+}
+
+/* {{{ proto boolean rockets_recv()
+		Read N bytes into BUF from socket FD.
+		Returns the number read or -1 for errors. */
+PHP_FUNCTION(rockets_recv)
+{
+	int fd, byte_count, flags = 0, recv_len = 128;
+	long arg1, arg2 = NULL, arg3 = NULL;
+	char buf[4096];
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l|ll", &arg1, &arg2, &arg3) == FAILURE) {
+		return;
+	}
+
+	fd = (int)arg1;
+	if (arg2 != NULL) {
+		recv_len = (int)arg2;
+	}
+	if (arg3 != NULL) {
+		flags = (int)arg3;
+	}
+
+	bzero(buf, sizeof(buf));
+	byte_count = recv(fd, buf, sizeof buf, flags);
+
+	RETURN_STRINGL(buf, byte_count, 0);
+}
+
+/* {{{ proto boolean rockets_send()
+		Send N bytes of BUF to socket FD.  Returns the number sent or -1.*/
+PHP_FUNCTION(rockets_send)
+{
+	int fd, byte_count, flags = 0, recv_len = 128, arg2_len;
+	long arg1, arg3 = NULL;
+	char *arg2;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ls|l", &arg1, &arg2, &arg2_len, &arg3) == FAILURE) {
+		return;
+	}
+
+	fd = (int)arg1;
+	if (arg3 != NULL) {
+		flags = (int)arg3;
+	}
+
+	byte_count = send(fd, arg2, arg2_len, flags);
+	RETURN_LONG((long)byte_count);
 }
 
 /*

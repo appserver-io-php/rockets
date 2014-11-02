@@ -28,9 +28,11 @@
       <file leaf-file-name="rockets.php" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/rockets.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.18163471" vertical-offset="0" max-vertical-offset="991">
-              <caret line="20" column="0" selection-start-line="20" selection-start-column="0" selection-end-line="20" selection-end-column="0" />
-              <folding />
+            <state vertical-scroll-proportion="0.21291624" vertical-offset="479" max-vertical-offset="1500">
+              <caret line="54" column="0" selection-start-line="54" selection-start-column="0" selection-end-line="54" selection-end-column="0" />
+              <folding>
+                <marker date="1414962428266" expanded="true" signature="1593:1597" placeholder="..." />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -173,9 +175,11 @@
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/rockets.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.18163471" vertical-offset="0" max-vertical-offset="991">
-          <caret line="20" column="0" selection-start-line="20" selection-start-column="0" selection-end-line="20" selection-end-column="0" />
-          <folding />
+        <state vertical-scroll-proportion="0.21291624" vertical-offset="479" max-vertical-offset="1500">
+          <caret line="54" column="0" selection-start-line="54" selection-start-column="0" selection-end-line="54" selection-end-column="0" />
+          <folding>
+            <marker date="1414962428266" expanded="true" signature="1593:1597" placeholder="..." />
+          </folding>
         </state>
       </provider>
     </entry>
