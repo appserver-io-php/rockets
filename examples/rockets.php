@@ -31,6 +31,11 @@ var_dump(
     $serverFd = rockets_socket(AF_INET, SOCK_STREAM, SOL_TCP)
 );
 
+echo "rockets_bind ";
+// bind server socket to local address and port
+var_dump(
+    rockets_bind($serverFd, '0.0.0.0', 5556, AF_INET)
+);
 
 echo "socket get option SO_REUSEADDR";
 var_dump(
@@ -59,12 +64,6 @@ var_dump(
     rockets_getsockopt($serverFd, SOL_TCP, TCP_NODELAY)
 );
 
-echo "rockets_bind ";
-// bind server socket to local address and port
-var_dump(
-    rockets_bind($serverFd, '0.0.0.0', 5556, AF_INET)
-);
-
 echo "rockets_listen ";
 // listen for connections with backlog of 1024
 var_dump(
@@ -74,6 +73,7 @@ var_dump(
 $httpResponseMessage = <<<EOD
 HTTP/1.1 200 OK
 Server: Rockets/0.1.0
+Connection: close
 Content-Length: 0
 Content-Type: text/html;charset=UTF-8
 
@@ -93,7 +93,7 @@ class Acceptor extends Thread
         while (1) {
             if ($clientFd = rockets_accept($this->fd)) {
                 rockets_recv($clientFd);
-                rockets_send($clientFd, HTTP_RESPONSE_MESSAGE);
+                var_dump(rockets_send($clientFd, HTTP_RESPONSE_MESSAGE));
                 rockets_close($clientFd);
             }
         }

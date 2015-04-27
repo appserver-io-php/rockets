@@ -51,7 +51,7 @@ ZEND_DECLARE_MODULE_GLOBALS(rockets)
 static int le_rockets;
 
 const zend_function_entry rockets_functions[] = {
-    PHP_FE(rockets_socket, NULL)
+	PHP_FE(rockets_socket, NULL)
 	PHP_FE(rockets_bind, NULL)
 	PHP_FE(rockets_listen, NULL)
 	PHP_FE(rockets_accept, NULL)
@@ -60,20 +60,20 @@ const zend_function_entry rockets_functions[] = {
 	PHP_FE(rockets_getsockopt, NULL)
 	PHP_FE(rockets_recv, NULL)
 	PHP_FE(rockets_send, NULL)
-    PHP_FE_END
+	PHP_FE_END
 };
 
 zend_module_entry rockets_module_entry = {
-    STANDARD_MODULE_HEADER,
-    ROCKETS_NAME,
+	STANDARD_MODULE_HEADER,
+	ROCKETS_NAME,
 	rockets_functions,
-    PHP_MINIT(rockets),
-    PHP_MSHUTDOWN(rockets),
-    PHP_RINIT(rockets),
-    PHP_RSHUTDOWN(rockets),
-    PHP_MINFO(rockets),
-    ROCKETS_VERSION,
-    STANDARD_MODULE_PROPERTIES
+	PHP_MINIT(rockets),
+	PHP_MSHUTDOWN(rockets),
+	PHP_RINIT(rockets),
+	PHP_RSHUTDOWN(rockets),
+	PHP_MINFO(rockets),
+	ROCKETS_VERSION,
+	STANDARD_MODULE_PROPERTIES
 };
 
 PHP_INI_BEGIN()
@@ -96,64 +96,59 @@ static void php_rockets_init_globals(zend_rockets_globals *rockets_globals)
 
 PHP_MSHUTDOWN_FUNCTION(rockets)
 {
-    UNREGISTER_INI_ENTRIES();
+	/*
+	UNREGISTER_INI_ENTRIES();
 #ifdef ZTS
-    ts_free_id(rockets_globals_id);
+	ts_free_id(rockets_globals_id);
 #else
-    php_rockets_shutdown_globals(&rockets_globals TSRMLS_CC);
+	php_rockets_shutdown_globals(&rockets_globals TSRMLS_CC);
 #endif
-    return SUCCESS;
+	*/
+	return SUCCESS;
 }
 
 PHP_MINIT_FUNCTION(rockets)
 {
-    REGISTER_INI_ENTRIES();
-
-	/* init globals */
-    ZEND_INIT_MODULE_GLOBALS(rockets, php_rockets_init_globals, NULL);
-
-    return SUCCESS;
+	/*
+	REGISTER_INI_ENTRIES();
+	// init globals
+	ZEND_INIT_MODULE_GLOBALS(rockets, php_rockets_init_globals, NULL);
+	*/
+	return SUCCESS;
 }
 
 PHP_RINIT_FUNCTION(rockets)
 {
-    return SUCCESS;
+	return SUCCESS;
 }
 
 PHP_RSHUTDOWN_FUNCTION(rockets)
 {
-    return SUCCESS;
+	return SUCCESS;
 }
 
 PHP_MINFO_FUNCTION(rockets)
 {
 	php_info_print_table_start();
-    php_info_print_table_header(2, "rockets support", "enabled");
-    php_info_print_table_row(2, "Version", ROCKETS_VERSION);
-    php_info_print_table_end();
+	php_info_print_table_header(2, "rockets support", "enabled");
+	php_info_print_table_row(2, "Version", ROCKETS_VERSION);
+	php_info_print_table_end();
 
-    DISPLAY_INI_ENTRIES();
+	DISPLAY_INI_ENTRIES();
 }
 
 /* {{{ proto int rockets_socket()
 		Create a new socket of type TYPE in domain DOMAIN, using
-		protocol PROTOCOL.  If PROTOCOL is zero, one is chosen automatically.
+		protocol PROTOCOL. If PROTOCOL is zero, one is chosen automatically.
 		Returns a file descriptor for the new socket, or -1 for errors.  */
 PHP_FUNCTION(rockets_socket)
 {
-	int fd = 0, type, domain, protocol;
-	long arg1, arg2, arg3 = NULL;
+	long arg1, arg2, arg3 = 0;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll|l", &arg1, &arg2, &arg3) == FAILURE) {
 		return;
 	}
-	type = (int)arg1;
-	domain = (int)arg2;
-	if (arg3 != NULL) {
-		protocol = arg3;
-	}
-
-	RETURN_LONG((long)socket(type, domain, protocol));
+	RETURN_LONG((long)socket((int)arg1, (int)arg2, (int)arg3));
 }
 
 /* {{{ proto int rockets_bind()
@@ -162,17 +157,17 @@ PHP_FUNCTION(rockets_bind)
 {
 	char ip[INET_ADDRSTRLEN];
 	int fd, ip_len, port, family = AF_INET;
-    struct sockaddr_in sin = { 0 };
+	struct sockaddr_in sin = { 0 };
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lsl|l", &fd, &ip, &ip_len, &port, &family) == FAILURE) {
 		return;
 	}
 
-    sin.sin_family = family;
-    sin.sin_port = htons(port);
-    inet_pton(AF_INET, ip, &(sin.sin_addr));
+	sin.sin_family = family;
+	sin.sin_port = htons(port);
+	inet_pton(AF_INET, ip, &(sin.sin_addr));
 
-    RETURN_LONG((long)bind(fd, (struct sockaddr*)&sin, sizeof(sin)));
+	RETURN_LONG((long)bind(fd, (struct sockaddr*)&sin, sizeof(sin)));
 }
 
 /* {{{ proto int rockets_listen()
@@ -182,17 +177,15 @@ PHP_FUNCTION(rockets_bind)
 PHP_FUNCTION(rockets_listen)
 {
 	long arg1, arg2 = NULL;
-	int fd, backlog = 128;
+	int backlog = 128;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l|l", &arg1, &arg2) == FAILURE) {
 		return;
 	}
-	fd = (int)arg1;
 	if (arg2 != NULL) {
 		backlog = (int)arg2;
 	}
-
-	RETURN_LONG((long)listen(fd, backlog));
+	RETURN_LONG((long)listen((int)arg1, backlog));
 }
 
 /* {{{ proto int rockets_accept()
@@ -204,15 +197,11 @@ PHP_FUNCTION(rockets_listen)
 PHP_FUNCTION(rockets_accept)
 {
 	long arg1;
-	int listenfd = 0, connfd = 0;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &arg1) == FAILURE) {
 		return;
 	}
-	listenfd = (int)arg1;
-
-	connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
-	RETURN_LONG((long)connfd);
+	RETURN_LONG((long)accept((int)arg1, (struct sockaddr*)NULL, NULL));
 }
 
 /* {{{ proto boolean rockets_close()
@@ -221,17 +210,11 @@ PHP_FUNCTION(rockets_accept)
 PHP_FUNCTION(rockets_close)
 {
 	long arg1;
-	int fd;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &arg1) == FAILURE) {
-	    return;
+		return;
 	}
-	fd = (int)arg1;
-	if (close(fd)) {
-		RETURN_TRUE;
-	} else  {
-		RETURN_FALSE;
-	}
+	RETURN_LONG((long)close((int)arg1));
 }
 
 /* {{{ proto boolean rockets_setsockopt()
@@ -240,23 +223,14 @@ PHP_FUNCTION(rockets_close)
 		Returns 0 on success, -1 for errors.  */
 PHP_FUNCTION(rockets_setsockopt)
 {
-	long arg1, arg2, arg3;
-	char *arg4, opt_val;
-	int fd, level, opt, arg4_len;
+	long arg1, arg2, arg3, arg4;
+	int optVal;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "llls", &arg1, &arg2, &arg3, &arg4, &arg4_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "llll", &arg1, &arg2, &arg3, &arg4) == FAILURE) {
 		return;
 	}
-
-	fd = (int)arg1;
-	level = (int)arg2;
-	opt = (int)arg3;
-
-	if (setsockopt(fd, level, opt, &arg4, &arg4_len)) {
-		RETURN_FALSE;
-	} else  {
-		RETURN_TRUE;
-	}
+	optVal = (int)optVal;
+	RETURN_LONG((long)setsockopt((int)arg1, (int)arg2, (int)arg3, &optVal, sizeof(optVal)));
 }
 
 /* {{{ proto boolean rockets_getsockopt()
@@ -280,7 +254,6 @@ PHP_FUNCTION(rockets_getsockopt)
 	getsockopt(fd, level, opt, &opt_val, &opt_val_len);
 
 	RETURN_LONG((long)opt_val);
-	//RETURN_STRINGL(opt_val, opt_val_len, 0);
 }
 
 /* {{{ proto boolean rockets_recv()
@@ -327,8 +300,7 @@ PHP_FUNCTION(rockets_send)
 		flags = (int)arg3;
 	}
 
-	byte_count = send(fd, arg2, arg2_len, flags);
-	RETURN_LONG((long)byte_count);
+	RETURN_LONG((long)send(fd, arg2, arg2_len, flags));
 }
 
 /*
