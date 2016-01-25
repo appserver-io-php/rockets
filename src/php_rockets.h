@@ -67,6 +67,7 @@ PHP_RINIT_FUNCTION(rockets);
 PHP_RSHUTDOWN_FUNCTION(rockets);
 PHP_MINFO_FUNCTION(rockets);
 
+PHP_FUNCTION(rockets_test);
 PHP_FUNCTION(rockets_socket);
 PHP_FUNCTION(rockets_bind);
 PHP_FUNCTION(rockets_listen);
@@ -76,15 +77,22 @@ PHP_FUNCTION(rockets_setsockopt);
 PHP_FUNCTION(rockets_getsockopt);
 PHP_FUNCTION(rockets_recv);
 PHP_FUNCTION(rockets_send);
+PHP_FUNCTION(rockets_SSL_new);
+PHP_FUNCTION(rockets_SSL_set_fd);
+PHP_FUNCTION(rockets_SSL_CTX_new);
+PHP_FUNCTION(rockets_SSL_CTX_set_options);
+PHP_FUNCTION(rockets_SSL_CTX_use_certificate_file);
+PHP_FUNCTION(rockets_SSL_CTX_use_PrivateKey_file);
+
 
 ZEND_BEGIN_MODULE_GLOBALS(rockets)
-    long                     pproftrace;
+	unsigned long	counter;
 ZEND_END_MODULE_GLOBALS(rockets)
 
 PHPAPI ZEND_EXTERN_MODULE_GLOBALS(apd)
 
 #ifdef ZTS
-#define ROCKETS_GLOBALS(v) TSRMG(rockets_globals_id, zend_rockets_globals *, v)
+#define ROCKETS_GLOBALS(v) TSRMG(rockets_globals_id, zend_rockets_globals*, v)
 #else
 #define ROCKETS_GLOBALS(v) (rockets_globals.v)
 #endif
