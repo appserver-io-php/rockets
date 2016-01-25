@@ -91,6 +91,7 @@ class Acceptor extends Thread
     public function run()
     {
         while (1) {
+            var_dump(rockets_test());
             if ($clientFd = rockets_accept($this->fd)) {
                 rockets_recv($clientFd);
                 var_dump(rockets_send($clientFd, HTTP_RESPONSE_MESSAGE));

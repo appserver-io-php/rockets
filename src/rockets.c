@@ -46,11 +46,22 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include <openssl/bio.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+
 ZEND_DECLARE_MODULE_GLOBALS(rockets)
 
 static int le_rockets;
 
+int rockets_counter[1024];
+char rockets_strs[255][256] = {"foo", "bar", "bletch"};
+zval *rockets_global_zval;
+
+HashTable rockets_global_ht;
+
 const zend_function_entry rockets_functions[] = {
+	PHP_FE(rockets_test, NULL)
 	PHP_FE(rockets_socket, NULL)
 	PHP_FE(rockets_bind, NULL)
 	PHP_FE(rockets_listen, NULL)
@@ -60,6 +71,12 @@ const zend_function_entry rockets_functions[] = {
 	PHP_FE(rockets_getsockopt, NULL)
 	PHP_FE(rockets_recv, NULL)
 	PHP_FE(rockets_send, NULL)
+	PHP_FE(rockets_SSL_new, NULL)
+	PHP_FE(rockets_SSL_set_fd, NULL)
+	PHP_FE(rockets_SSL_CTX_new, NULL)
+	PHP_FE(rockets_SSL_CTX_set_options, NULL)
+	PHP_FE(rockets_SSL_CTX_use_certificate_file, NULL)
+	PHP_FE(rockets_SSL_CTX_use_PrivateKey_file, NULL)
 	PHP_FE_END
 };
 
@@ -84,36 +101,46 @@ PHP_INI_END()
 ZEND_GET_MODULE(rockets)
 #endif
 
-static void php_rockets_shutdown_globals (zend_rockets_globals *rockets_globals TSRMLS_DC)
+static void php_rockets_globals_dtor(zend_rockets_globals *rockets_globals TSRMLS_DC)
 {
 
 }
 
-static void php_rockets_init_globals(zend_rockets_globals *rockets_globals)
+static void php_rockets_globals_ctor(zend_rockets_globals *rockets_globals)
 {
-
+	rockets_globals->counter = 0;
 }
 
 PHP_MSHUTDOWN_FUNCTION(rockets)
 {
-	/*
 	UNREGISTER_INI_ENTRIES();
 #ifdef ZTS
 	ts_free_id(rockets_globals_id);
 #else
-	php_rockets_shutdown_globals(&rockets_globals TSRMLS_CC);
+	php_rockets_globals_dtor(&rockets_globals TSRMLS_CC);
 #endif
-	*/
+
 	return SUCCESS;
 }
 
 PHP_MINIT_FUNCTION(rockets)
 {
-	/*
 	REGISTER_INI_ENTRIES();
 	// init globals
-	ZEND_INIT_MODULE_GLOBALS(rockets, php_rockets_init_globals, NULL);
-	*/
+	ZEND_INIT_MODULE_GLOBALS(rockets, php_rockets_globals_ctor, NULL);
+
+	SSL_load_error_strings();
+	SSL_library_init();
+	OpenSSL_add_all_algorithms();
+
+
+	ALLOC_INIT_ZVAL(rockets_global_zval);
+
+	Z_TYPE_P(rockets_global_zval) = IS_LONG;
+	Z_LVAL_P(rockets_global_zval) = 1234;
+
+	rockets_counter[1] = 112;
+
 	return SUCCESS;
 }
 
@@ -137,6 +164,11 @@ PHP_MINFO_FUNCTION(rockets)
 	DISPLAY_INI_ENTRIES();
 }
 
+PHP_FUNCTION(rockets_test)
+{
+	*return_value = *rockets_global_zval;
+}
+
 /* {{{ proto int rockets_socket()
 		Create a new socket of type TYPE in domain DOMAIN, using
 		protocol PROTOCOL. If PROTOCOL is zero, one is chosen automatically.
@@ -148,6 +180,7 @@ PHP_FUNCTION(rockets_socket)
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll|l", &arg1, &arg2, &arg3) == FAILURE) {
 		return;
 	}
+
 	RETURN_LONG((long)socket((int)arg1, (int)arg2, (int)arg3));
 }
 
@@ -162,7 +195,6 @@ PHP_FUNCTION(rockets_bind)
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lsl|l", &fd, &ip, &ip_len, &port, &family) == FAILURE) {
 		return;
 	}
-
 	sin.sin_family = family;
 	sin.sin_port = htons(port);
 	inet_pton(AF_INET, ip, &(sin.sin_addr));
@@ -176,15 +208,16 @@ PHP_FUNCTION(rockets_bind)
 		Returns 0 on success, -1 for errors.  */
 PHP_FUNCTION(rockets_listen)
 {
-	long arg1, arg2 = NULL;
+	long arg1, arg2 = 0;
 	int backlog = 128;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l|l", &arg1, &arg2) == FAILURE) {
 		return;
 	}
-	if (arg2 != NULL) {
+	if (arg2 > 0) {
 		backlog = (int)arg2;
 	}
+
 	RETURN_LONG((long)listen((int)arg1, backlog));
 }
 
@@ -201,6 +234,7 @@ PHP_FUNCTION(rockets_accept)
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &arg1) == FAILURE) {
 		return;
 	}
+
 	RETURN_LONG((long)accept((int)arg1, (struct sockaddr*)NULL, NULL));
 }
 
@@ -214,13 +248,14 @@ PHP_FUNCTION(rockets_close)
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &arg1) == FAILURE) {
 		return;
 	}
+
 	RETURN_LONG((long)close((int)arg1));
 }
 
 /* {{{ proto boolean rockets_setsockopt()
 		Set socket FD's option OPTNAME at protocol level LEVEL
 		to *OPTVAL (which is OPTLEN bytes long).
-		Returns 0 on success, -1 for errors.  */
+		Returns 0 on success, -1 for errors. }}} */
 PHP_FUNCTION(rockets_setsockopt)
 {
 	long arg1, arg2, arg3, arg4;
@@ -230,77 +265,91 @@ PHP_FUNCTION(rockets_setsockopt)
 		return;
 	}
 	optVal = (int)optVal;
+
 	RETURN_LONG((long)setsockopt((int)arg1, (int)arg2, (int)arg3, &optVal, sizeof(optVal)));
 }
 
 /* {{{ proto boolean rockets_getsockopt()
 		Put the current value for socket FD's option OPTNAME at protocol level LEVEL
 		into OPTVAL (which is *OPTLEN bytes long), and set *OPTLEN to the value's
-		actual length.  Returns 0 on success, -1 for errors.  */
+		actual length.  Returns 0 on success, -1 for errors. }}} */
 PHP_FUNCTION(rockets_getsockopt)
 {
-	char* opt_val;
-	int opt_val_len, fd, level, opt;
+	void* opt_val;
+	int opt_val_len;
 	long arg1, arg2, arg3;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lll", &arg1, &arg2, &arg3) == FAILURE) {
 		return;
 	}
 
-	fd = (int)arg1;
-	level = (int)arg2;
-	opt = (int)arg3;
-
-	getsockopt(fd, level, opt, &opt_val, &opt_val_len);
+	getsockopt((int)arg1, (int)arg2, (int)arg3, &opt_val, &opt_val_len);
 
 	RETURN_LONG((long)opt_val);
 }
 
 /* {{{ proto boolean rockets_recv()
 		Read N bytes into BUF from socket FD.
-		Returns the number read or -1 for errors. */
+		Returns the number read or -1 for errors. }}} */
 PHP_FUNCTION(rockets_recv)
 {
-	int fd, byte_count, flags = 0, recv_len = 128;
-	long arg1, arg2 = NULL, arg3 = NULL;
-	char buf[4096];
+	int byte_count, flags = 0, recv_len = 128;
+	long arg1, arg2 = 128, arg3 = 0;
+	char buf[8192];
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l|ll", &arg1, &arg2, &arg3) == FAILURE) {
 		return;
 	}
 
-	fd = (int)arg1;
-	if (arg2 != NULL) {
-		recv_len = (int)arg2;
-	}
-	if (arg3 != NULL) {
-		flags = (int)arg3;
-	}
-
 	bzero(buf, sizeof(buf));
-	byte_count = recv(fd, buf, sizeof buf, flags);
+	byte_count = recv((int)arg1, buf, (int)arg2, (int)arg3);
 
 	RETURN_STRINGL(buf, byte_count, 0);
 }
 
 /* {{{ proto boolean rockets_send()
-		Send N bytes of BUF to socket FD.  Returns the number sent or -1.*/
+		Send N bytes of BUF to socket FD.  Returns the number sent or -1. }}}	*/
 PHP_FUNCTION(rockets_send)
 {
-	int fd, byte_count, flags = 0, recv_len = 128, arg2_len;
-	long arg1, arg3 = NULL;
+	int byte_count, flags = 0, arg2_len;
+	long arg1, arg3 = 128;
 	char *arg2;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ls|l", &arg1, &arg2, &arg2_len, &arg3) == FAILURE) {
 		return;
 	}
 
-	fd = (int)arg1;
-	if (arg3 != NULL) {
-		flags = (int)arg3;
-	}
+	RETURN_LONG((long)send((int)arg1, arg2, arg2_len, (int)arg3));
+}
 
-	RETURN_LONG((long)send(fd, arg2, arg2_len, flags));
+PHP_FUNCTION(rockets_SSL_new)
+{
+
+}
+
+PHP_FUNCTION(rockets_SSL_set_fd)
+{
+
+}
+
+PHP_FUNCTION(rockets_SSL_CTX_new)
+{
+
+}
+
+PHP_FUNCTION(rockets_SSL_CTX_set_options)
+{
+
+}
+
+PHP_FUNCTION(rockets_SSL_CTX_use_certificate_file)
+{
+
+}
+
+PHP_FUNCTION(rockets_SSL_CTX_use_PrivateKey_file)
+{
+
 }
 
 /*
